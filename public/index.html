@@ -101,7 +101,7 @@
             render();
         };
 
-        var onMouseDoubleClick = (event) => {
+        var onMouseClick = (event) => {
             event.preventDefault();
 
             mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
@@ -113,6 +113,11 @@
 
             raycaster.setFromCamera( mouse, camera );
             var intersects = raycaster.intersectObjects(lineMesh, false);
+
+            if(selectedLine == null) {
+                selectLine(intersects);
+                return;
+            }
 
             if(intersects.length > 0) {
 				if (selectedLine == intersects[0].object) {
@@ -190,9 +195,14 @@
             raycaster.setFromCamera( mouse, camera );
             var intersects = raycaster.intersectObjects(lineMesh, false);
 
+            selectLine(intersects);
+        };
+
+        var selectLine = (intersects) => {
+            
             if(intersects.length > 0) {
 
-				if (selectedLine != intersects[0].object) {
+                if (selectedLine != intersects[0].object) {
                     for(var i=0; i<lineMesh.length; i++) {
                         if (selectedLine != intersects[0].object) {
                             lineMesh[i].material.color.set(boardColor);
@@ -211,13 +221,13 @@
                                 selectedLine.gameZAxis);
                     }
                 }
-            } else {
+                } else {
                 if(selectedLine) {
                     selectedLine.material.color.set(boardColor);
                 }
                 selectedLine = null;
-            }
-        };
+                }
+        }
 
         var addBall = (ballColor, x, y, z) => {
             var tst = 
@@ -326,7 +336,7 @@
             // events
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('mousemove', onMouseMove);
-            window.addEventListener('click', onMouseDoubleClick);
+            window.addEventListener('click', onMouseClick);
             controls.addEventListener('change', render);
             document.getElementById('restart').addEventListener('click', onRestartClick);
         };
