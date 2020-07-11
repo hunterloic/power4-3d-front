@@ -380,7 +380,7 @@
         };
 
         var startNewGame = (cb) => {
-            $.get(backendUrl + "/game/start", function( data ) {
+            $.post(backendUrl + "/game/start", function( data ) {
                 if(cb) {
                     cb();
                 }
