@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Power 4 3D</title>
+    <style>
+        body {
+            margin:0;
+            height: 100vh;
+        }
+
+        canvas {
+            display:block;
+        }
+
+        #winner {
+            position: absolute;
+            display:none;
+            top: 70px;
+            left: 10px;
+            background-color:#CCAACC;
+            border: black solid 1px;
+            width: 97%;
+            height: 75px;
+            opacity: .4; 
+
+            padding:5px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 30px;
+        }
+        
+        #restart {
+            text-align: center;
+            font-weight: bold;
+            font-size: 30px;
+
+        }
+    </style>
+</head>
+<body>
+    <script src="js/three.min.js"></script>
+    <script src="js/OrbitControls.js"></script>
+    <script src="js/gsap.min.js"></script>
+    <script src="js/jquery-3.5.1.min.js"></script>
+
+    <div id="winner"><div id="infos"></div><button id="restart">restart</button><br/></div>
+
+    <script>
+        var camera;
+        var scene;
+        var renderer;
+        var controls;
+        var boardBase;
+        var lightFront;
+        var raycaster;
+        var mouse;
+        var lineMesh = new Array();
+        var selectedLine;
+        var temporaryBall;
+        var placedBallsInLines;
+        var placedBalls = new Array();
+
+        var boardColor = 0xFFCC00;
+        var ballWhiteColor = 0xDDDDDD;
+        var ballBlackColor = 0x222222;
+
+        var baseYPosition = -40;
+
+        var boardHeight = 3;
+        var linesSize = 2.5;
+        var ballSize = 12;
+
+        var lineSpace = ballSize + 5;
+        var linesHeight = ballSize * 4 + 5;
+        var boardSize = lineSpace * 4;
+
+        var tl;
+        
+        var turn;
+        var winner;
+
+        var backendUrl = "http://localhost:3000";
+
+        var onWindowResize = () => {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            render();
+        }
+
+        var render = () => {
+            renderer.render(scene, camera);
+        };
+
+        var animate = () => {
+            requestAnimationFrame(animate);
+            controls.update();
+            render();
+        };
+
+        var onMouseDoubleClick = (event) => {
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+			mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+            
+            if(winner != 0) {
+                return;
+            }
+
+            raycaster.setFromCamera( mouse, camera );
+            var intersects = raycaster.intersectObjects(lineMesh, false);
+
+            if(intersects.length > 0) {
+				if (selectedLine == intersects[0].object) {
+                    if(lineMesh.includes(intersects[0].object)) {
+
+                        var ballCountInLine = placedBallsInLines[selectedLine.gameXAxis][selectedLine.gameZAxis];
+                        if(ballCountInLine < 4) {
+
+                            // Can place ball
+                            if(temporaryBall) {
+                                
+                                // Call API
+                                $.post(backendUrl + "/game/play", 
+                                    {
+                                        player: turn, 
+                                        x: selectedLine.gameXAxis,
+                                        y: ballCountInLine,
+                                        z: selectedLine.gameZAxis,
+                                    }, function( data ) {
+                                        // Place ball
+                                        tl = new TimelineMax();
+                                        tl.to(
+                                            temporaryBall.position, 
+                                            1, 
+                                            {
+                                                y: baseYPosition + ballSize / 2 + boardHeight / 2 + ballSize * ballCountInLine, 
+                                                ease: Expo.easeOut
+                                            }
+                                        );
+                                        
+                                        // Set balls variables
+                                        placedBalls.push(temporaryBall);
+                                        placedBallsInLines[selectedLine.gameXAxis][selectedLine.gameZAxis] = ballCountInLine + 1;
+
+                                        // Place new temporary ball
+                                        temporaryBall = 
+                                            addTemporaryBall(
+                                                (turn == 2 ? ballWhiteColor : ballBlackColor), 
+                                                selectedLine.gameXAxis, 
+                                                selectedLine.gameZAxis);
+                                        
+                                        // Check winner
+                                        winner = data.game.winner;
+                                        if(winner != 0) {
+                                            $("#winner #infos").html("The winner is : Player " + winner);
+                                            $("#winner").css("display", "block");
+                                        }
+
+                                        // switch player
+                                        turn = data.game.turn;
+                                    }
+                                )
+                                .fail(function(data) {
+                                    var error = "";
+                                    try {
+                                        error = data.responseJSON.error.message;
+                                    } catch(e) { }
+                                    alert("Error : " + error);
+                                });
+
+
+                            }
+                        }
+                    }
+                }
+            }
+        };
+
+        var onMouseMove = (event) => {
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+			mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+            raycaster.setFromCamera( mouse, camera );
+            var intersects = raycaster.intersectObjects(lineMesh, false);
+
+            if(intersects.length > 0) {
+
+				if (selectedLine != intersects[0].object) {
+                    for(var i=0; i<lineMesh.length; i++) {
+                        if (selectedLine != intersects[0].object) {
+                            lineMesh[i].material.color.set(boardColor);
+                        }
+                    }
+                    selectedLine = null;
+                    
+                    if(lineMesh.includes(intersects[0].object)) {
+                        selectedLine = intersects[0].object;
+                        selectedLine.material.color.set(0xFF0000);
+                        removeTemporaryBall();
+                        temporaryBall =
+                            addTemporaryBall(
+                                (turn == 1 ? ballWhiteColor : ballBlackColor), 
+                                selectedLine.gameXAxis, 
+                                selectedLine.gameZAxis);
+                    }
+                }
+            } else {
+                if(selectedLine) {
+                    selectedLine.material.color.set(boardColor);
+                }
+                selectedLine = null;
+            }
+        };
+
+        var addBall = (ballColor, x, y, z) => {
+            var tst = 
+                new THREE.Mesh(
+                        new THREE.SphereGeometry(ballSize / 2, 10, 10), 
+                        new THREE.MeshLambertMaterial({color: ballColor}));
+                tst.position.x = boardSize / 2 - lineSpace / 2 - lineSpace * x;
+                tst.position.y = baseYPosition + ballSize / 2 + boardHeight / 2 +  ballSize * y;
+                tst.position.z = boardSize / 2 - lineSpace / 2 - lineSpace * z;
+                scene.add(tst);
+            return tst;
+        };
+
+        var addTemporaryBall = (ballColor, x, z) => {
+            var tst = 
+                new THREE.Mesh(
+                        new THREE.SphereGeometry(ballSize / 2, 10, 10), 
+                        new THREE.MeshLambertMaterial({color: ballColor}));
+                tst.position.x = boardSize / 2 - lineSpace / 2 - lineSpace * x;
+                tst.position.y = baseYPosition + ballSize / 2 + boardHeight / 2 + linesHeight + 5;
+                tst.position.z = boardSize / 2 - lineSpace / 2 - lineSpace * z;
+                scene.add(tst);
+            return tst;
+        };
+
+        var init = () => {
+            // scene
+            scene = new THREE.Scene();
+            
+            // camera
+            camera = 
+                new THREE.PerspectiveCamera(
+                    75, 
+                    window.innerWidth / window.innerHeight,
+                    1,
+                    10000);
+            camera.position.x = 50;
+            camera.position.y = 50;
+            camera.position.z = 75;
+            
+            // renderer
+            renderer = new THREE.WebGLRenderer({antialias: true});
+            renderer.setClearColor("#E5E5E5");
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+            
+            // controls
+            controls = new THREE.OrbitControls( camera, renderer.domElement );
+            
+            // lights
+            lightFront = new THREE.PointLight(0xFFFFFF, 1.5, 1000);
+            lightFront.position.x = 30;
+            lightFront.position.y = 60;
+            lightFront.position.z = 150;
+            scene.add(lightFront);
+            
+            lightBack = new THREE.PointLight(0xFFFFFF, 1.5, 1000);
+            lightBack.position.x = -30;
+            lightBack.position.y = -60;
+            lightBack.position.z = -150;
+            scene.add(lightBack);
+
+            // -----
+            // board
+            // -----
+
+            // bottom
+            boardBase = 
+                new THREE.Mesh(
+                    new THREE.BoxGeometry( boardSize, boardHeight, boardSize ), 
+                    new THREE.MeshLambertMaterial({color: boardColor}));
+            boardBase.position.x = 0;
+            boardBase.position.y = baseYPosition;
+            boardBase.position.z = 0;
+            scene.add(boardBase);
+
+            // lines
+            for(var i=0; i<4; i++) {
+                for(var j=0; j<4; j++) {
+                    var cylinder = 
+                        new THREE.Mesh(
+                            new THREE.CylinderGeometry(linesSize / 2, linesSize / 2, linesHeight, 5, 5), 
+                            new THREE.MeshLambertMaterial({color: boardColor})
+                        );
+                    cylinder.position.x = boardSize / 2 - lineSpace / 2 - lineSpace * i;
+                    cylinder.position.y = baseYPosition + linesHeight / 2 + boardHeight / 2;
+                    cylinder.position.z = boardSize / 2 - lineSpace / 2 - lineSpace * j;
+                    cylinder.gameXAxis = i;
+                    cylinder.gameZAxis = j;
+                    scene.add( cylinder );
+                    lineMesh.push(cylinder);
+                }
+            }
+
+            // raycaster
+            mouse = new THREE.Vector2();
+            raycaster = new THREE.Raycaster();
+
+            // placed balls
+            initializePlacedBalls();
+
+            // game variables
+            winner = 0;
+            turn = 1;
+
+            // events
+            window.addEventListener('resize', onWindowResize);
+            window.addEventListener('mousemove', onMouseMove);
+            window.addEventListener('click', onMouseDoubleClick);
+            controls.addEventListener('change', render);
+            document.getElementById('restart').addEventListener('click', onRestartClick);
+        };
+
+        var initializePlacedBalls = () => {
+
+            placedBallsInLines = new Array();
+            for(i=0; i<4; i++) {
+                placedBallsInLinesSubArray = new Array();
+                for(j=0; j<4; j++) {
+                    placedBallsInLinesSubArray.push(0);
+                }
+                placedBallsInLines.push(placedBallsInLinesSubArray);
+            }
+            
+            while(placedBalls.length > 0){ 
+                scene.remove(placedBalls[0]);
+                placedBalls[0].geometry.dispose();
+                placedBalls[0].material.dispose();
+                placedBalls[0] = undefined;
+                placedBalls.splice(0, 1)
+            }
+        };
+
+        var removeTemporaryBall = () => {
+            if(temporaryBall) {
+                scene.remove(temporaryBall);
+                temporaryBall.geometry.dispose();
+                temporaryBall.material.dispose();
+                temporaryBall = undefined;
+            }
+        };
+
+        var onRestartClick = () => {
+
+            initializePlacedBalls();
+
+            removeTemporaryBall();
+
+            for(var i=0; i<lineMesh.length; i++) {
+                lineMesh[i].material.color.set(boardColor);
+            }
+            selectedLine = null;
+
+            $("#winner").css("display", "none");
+
+            winner = 0;
+            turn = 1;
+
+            startNewGame();
+        };
+
+        var startNewGame = (cb) => {
+            $.get(backendUrl + "/game/start", function( data ) {
+                if(cb) {
+                    cb();
+                }
+            })
+            .fail(function() {
+                alert("Error when calling backend");
+            });
+        };
+
+        window.onload = () => {
+            startNewGame(() => {
+                init();
+                animate();
+            });
+        }
+
+    </script>
+</body>
+</html>
