@@ -131,6 +131,7 @@
                             if(temporaryBall) {
                                 
                                 // Call API
+                                blockMoves = true;
                                 $.post(backendUrl + "/game/play", 
                                     {
                                         player: turn, 
@@ -139,7 +140,6 @@
                                         z: selectedLine.gameZAxis,
                                     }, function( data ) {
                                         // Place ball
-                                        blockMoves = true;
                                         tl = new TimelineMax();
                                         tl.to(
                                             temporaryBall.position, 
@@ -182,6 +182,7 @@
                                         error = data.responseJSON.error.message;
                                     } catch(e) { }
                                     alert("Error : " + error);
+                                    blockMoves = false;
                                 });
 
 
