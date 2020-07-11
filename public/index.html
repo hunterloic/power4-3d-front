@@ -101,11 +101,7 @@
             render();
         };
 
-        var onMouseClick = (event) => {
-            event.preventDefault();
-
-            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-			mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+        var processClickOrTouch = () => {
             
             if(winner != 0) {
                 return;
@@ -114,8 +110,7 @@
             raycaster.setFromCamera( mouse, camera );
             var intersects = raycaster.intersectObjects(lineMesh, false);
 
-            if(selectedLine == null) {
-                selectLine(intersects);
+            if(selectLine(intersects)) {
                 return;
             }
 
@@ -184,6 +179,22 @@
                     }
                 }
             }
+        }
+
+        var onTouch = (event) => {
+            mouse.x = +(event.targetTouches[0].pageX / window.innerWidth) * 2 +-1;
+            mouse.y = -(event.targetTouches[0].pageY / window.innerHeight) * 2 + 1
+
+            processClickOrTouch();
+        }
+
+        var onMouseClick = (event) => {
+            event.preventDefault();
+
+            mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+            mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+            
+            processClickOrTouch();
         };
 
         var onMouseMove = (event) => {
@@ -200,6 +211,8 @@
 
         var selectLine = (intersects) => {
             
+            var result = false;
+
             if(intersects.length > 0) {
 
                 if (selectedLine != intersects[0].object) {
@@ -211,6 +224,7 @@
                     selectedLine = null;
                     
                     if(lineMesh.includes(intersects[0].object)) {
+                        result = true;
                         selectedLine = intersects[0].object;
                         selectedLine.material.color.set(0xFF0000);
                         removeTemporaryBall();
@@ -226,7 +240,9 @@
                     selectedLine.material.color.set(boardColor);
                 }
                 selectedLine = null;
-                }
+            }
+
+            return result;
         }
 
         var addBall = (ballColor, x, y, z) => {
@@ -336,6 +352,7 @@
             // events
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('mousemove', onMouseMove);
+            document.body.addEventListener("touchstart", onTouch, false);
             window.addEventListener('click', onMouseClick);
             controls.addEventListener('change', render);
             document.getElementById('restart').addEventListener('click', onRestartClick);
