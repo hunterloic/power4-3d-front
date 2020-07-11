@@ -84,6 +84,8 @@
 
         var backendUrl = "http://localhost:3000";
 
+        var blockMoves = false;
+
         var onWindowResize = () => {
             renderer.setSize(window.innerWidth, window.innerHeight);
             camera.aspect = window.innerWidth / window.innerHeight;
@@ -103,6 +105,10 @@
 
         var processClickOrTouch = () => {
             
+            if(blockMoves) {
+                return;
+            }
+
             if(winner != 0) {
                 return;
             }
@@ -133,6 +139,7 @@
                                         z: selectedLine.gameZAxis,
                                     }, function( data ) {
                                         // Place ball
+                                        blockMoves = true;
                                         tl = new TimelineMax();
                                         tl.to(
                                             temporaryBall.position, 
@@ -161,6 +168,8 @@
 
                                                     // switch player
                                                     turn = data.game.turn;
+                                                    
+                                                    blockMoves = false;
                                                 }
                                             }
                                         );
@@ -213,7 +222,9 @@
 
         var selectLine = (intersects) => {
             
-            var result = false;
+            if(blockMoves) {
+                return false;
+            }
 
             if(intersects.length > 0) {
 
@@ -226,7 +237,6 @@
                     selectedLine = null;
                     
                     if(lineMesh.includes(intersects[0].object)) {
-                        result = true;
                         selectedLine = intersects[0].object;
                         selectedLine.material.color.set(0xFF0000);
                         removeTemporaryBall();
@@ -235,16 +245,18 @@
                                 (turn == 1 ? ballWhiteColor : ballBlackColor), 
                                 selectedLine.gameXAxis, 
                                 selectedLine.gameZAxis);
+
+                        return true;
                     }
                 }
-                } else {
+            } else {
                 if(selectedLine) {
                     selectedLine.material.color.set(boardColor);
                 }
                 selectedLine = null;
             }
 
-            return result;
+            return false;
         }
 
         var addBall = (ballColor, x, y, z) => {
