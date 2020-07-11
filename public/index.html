@@ -70,7 +70,7 @@
         var baseYPosition = -40;
 
         var boardHeight = 3;
-        var linesSize = 2.5;
+        var linesSize = 3.5;
         var ballSize = 12;
 
         var lineSpace = ballSize + 5;
@@ -352,7 +352,7 @@
             // events
             window.addEventListener('resize', onWindowResize);
             window.addEventListener('mousemove', onMouseMove);
-            document.body.addEventListener("touchstart", onTouch, false);
+            document.body.addEventListener("touchend", onTouch, false);
             window.addEventListener('click', onMouseClick);
             controls.addEventListener('change', render);
             document.getElementById('restart').addEventListener('click', onRestartClick);
