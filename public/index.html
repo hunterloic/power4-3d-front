@@ -139,30 +139,32 @@
                                             1, 
                                             {
                                                 y: baseYPosition + ballSize / 2 + boardHeight / 2 + ballSize * ballCountInLine, 
-                                                ease: Expo.easeOut
+                                                ease: Expo.easeOut,
+                                                onComplete: () => {
+                                                    // Set balls variables
+                                                    placedBalls.push(temporaryBall);
+                                                    placedBallsInLines[selectedLine.gameXAxis][selectedLine.gameZAxis] = ballCountInLine + 1;
+
+                                                    // Place new temporary ball
+                                                    temporaryBall = 
+                                                        addTemporaryBall(
+                                                            (turn == 2 ? ballWhiteColor : ballBlackColor), 
+                                                            selectedLine.gameXAxis, 
+                                                            selectedLine.gameZAxis);
+                                                    
+                                                    // Check winner
+                                                    winner = data.game.winner;
+                                                    if(winner != 0) {
+                                                        $("#winner #infos").html("The winner is : Player " + winner);
+                                                        $("#winner").css("display", "block");
+                                                    }
+
+                                                    // switch player
+                                                    turn = data.game.turn;
+                                                }
                                             }
                                         );
                                         
-                                        // Set balls variables
-                                        placedBalls.push(temporaryBall);
-                                        placedBallsInLines[selectedLine.gameXAxis][selectedLine.gameZAxis] = ballCountInLine + 1;
-
-                                        // Place new temporary ball
-                                        temporaryBall = 
-                                            addTemporaryBall(
-                                                (turn == 2 ? ballWhiteColor : ballBlackColor), 
-                                                selectedLine.gameXAxis, 
-                                                selectedLine.gameZAxis);
-                                        
-                                        // Check winner
-                                        winner = data.game.winner;
-                                        if(winner != 0) {
-                                            $("#winner #infos").html("The winner is : Player " + winner);
-                                            $("#winner").css("display", "block");
-                                        }
-
-                                        // switch player
-                                        turn = data.game.turn;
                                     }
                                 )
                                 .fail(function(data) {
