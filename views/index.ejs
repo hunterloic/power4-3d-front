@@ -41,13 +41,13 @@
     </style>
 </head>
 <body>
-    <script src="js/three.min.js"></script>
-    <script src="js/OrbitControls.js"></script>
-    <script src="js/gsap.min.js"></script>
-    <script src="js/jquery-3.5.1.min.js"></script>
+    <script src="/public/js/three.min.js"></script>
+    <script src="/public/js/OrbitControls.js"></script>
+    <script src="/public/js/gsap.min.js"></script>
+    <script src="/public/js/jquery-3.5.1.min.js"></script>
 
     <div id="winner"><div id="infos"></div><button id="restart">restart</button><br/></div>
-
+    
     <script>
         var camera;
         var scene;
@@ -82,7 +82,7 @@
         var turn;
         var winner;
 
-        var backendUrl = "http://localhost:3000";
+        var backendUrl = "<%=backendUrl%>";
 
         var blockMoves = false;
 

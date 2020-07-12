@@ -8,6 +8,8 @@ app.use('/public', express.static('public'));
 app.use(bodyParser.urlencoded({extended:false}));
 app.use(bodyParser.json());
 
+app.set('view engine', 'ejs');
+
 // Allow CORS
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
@@ -18,6 +20,11 @@ app.use((req, res, next) => {
         return res.status(200).json({});
     }
     next();
+});
+
+app.get('/', (req, res) => {
+    var backendUrl = process.env.POWER4_FRONT_BACKENDURL || 'http://localhost:3000';
+    res.render('index', {backendUrl: backendUrl});
 });
 
 app.use((req, res, next) => {
