@@ -277,6 +277,15 @@
             selectLine(intersects);
         };
 
+        var unselectLines = (ommitLine) => {
+            for(var i=0; i<lineMesh.length; i++) {
+                if (ommitLine ? selectedLine != ommitLine : true) {
+                    lineMesh[i].material.color.set(boardColor);
+                }
+            }
+            selectedLine = null;
+        }
+
         var selectLine = (intersects) => {
             
             if(turn != currentPlayer.no) {
@@ -294,12 +303,8 @@
             if(intersects.length > 0) {
 
                 if (selectedLine != intersects[0].object) {
-                    for(var i=0; i<lineMesh.length; i++) {
-                        if (selectedLine != intersects[0].object) {
-                            lineMesh[i].material.color.set(boardColor);
-                        }
-                    }
-                    selectedLine = null;
+
+                    unselectLines(intersects[0].object);
                     
                     if(lineMesh.includes(intersects[0].object)) {
                         selectedLine = intersects[0].object;
@@ -639,6 +644,7 @@
                         placedBallsInLines[move.x][move.z] = move.y + 1;
                         
                         temporaryBall = undefined;
+                        unselectLines();
 
                         checkWinnerAndupdateTurn(() => {
                             if(cb) {
